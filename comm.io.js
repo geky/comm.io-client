@@ -11,6 +11,7 @@ module.exports = Comm
 
 
 // Local event handling functions
+var debug = util.debug
 var emit = util.emit
 var send = util.send
 
@@ -211,10 +212,14 @@ var debug = require('debug')('comm')
 var Emitter = eio.Emitter
 
 
+// Debugging function
+module.exports.debug = debug
+
 // Local event handling functions
 module.exports.on = Emitter.prototype.on
 module.exports.off = Emitter.prototype.off
 module.exports.emit = Emitter.prototype.emit
+
 module.exports.send = function() {
     var data = JSON.stringify(Array.prototype.slice.call(arguments))
 
