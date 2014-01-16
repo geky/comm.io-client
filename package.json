@@ -1,7 +1,7 @@
 {
   "name": "comm.io-client",
   "version": "0.0.1",
-  "description": "Client for direct browser-to-browser communcation",
+  "description": "Client for direct browser-to-browser communication",
   "contributors": [
     { "name": "Christopher Haster", "email": "chaster@utexas.edu" }
   ],
