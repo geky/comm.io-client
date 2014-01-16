@@ -51,6 +51,7 @@ function Comm(socket, opts) {
 
     socket.onmessage = 
     handles.message = function(data) {
+        debug('recv %s', data)
         var args = JSON.parse(data)
         var handler = handles[args.shift()]
 
@@ -136,7 +137,7 @@ function cio(uri, opts) {
     return new Comm(socket, opts)
 }
 
-},{"./comm":2,"engine.io-client":8,"util":7}],4:[function(require,module,exports){
+},{"./comm":2,"engine.io-client":9,"util":7}],4:[function(require,module,exports){
 var util = require('./util')
 
 module.exports = SocketComm
@@ -206,6 +207,7 @@ SocketComm.vemit = function(ids, args) {
 
 },{"./util":5}],5:[function(require,module,exports){
 var eio = require('engine.io-client')
+var debug = require('debug')('comm')
 var Emitter = eio.Emitter
 
 
@@ -214,13 +216,16 @@ module.exports.on = Emitter.prototype.on
 module.exports.off = Emitter.prototype.off
 module.exports.emit = Emitter.prototype.emit
 module.exports.send = function() {
-    this.send(JSON.stringify(Array.prototype.slice.call(arguments)))
+    var data = JSON.stringify(Array.prototype.slice.call(arguments))
+
+    debug('send %s', data)
+    this.send(data)
 }
 
 // EventEmitter class
 module.exports.Emitter = Emitter
 
-},{"engine.io-client":8}],6:[function(require,module,exports){
+},{"debug":8,"engine.io-client":9}],6:[function(require,module,exports){
 
 
 //
@@ -985,9 +990,148 @@ function hasOwnProperty(obj, prop) {
 
 },{"_shims":6}],8:[function(require,module,exports){
 
+/**
+ * Expose `debug()` as the module.
+ */
+
+module.exports = debug;
+
+/**
+ * Create a debugger with the given `name`.
+ *
+ * @param {String} name
+ * @return {Type}
+ * @api public
+ */
+
+function debug(name) {
+  if (!debug.enabled(name)) return function(){};
+
+  return function(fmt){
+    fmt = coerce(fmt);
+
+    var curr = new Date;
+    var ms = curr - (debug[name] || curr);
+    debug[name] = curr;
+
+    fmt = name
+      + ' '
+      + fmt
+      + ' +' + debug.humanize(ms);
+
+    // This hackery is required for IE8
+    // where `console.log` doesn't have 'apply'
+    window.console
+      && console.log
+      && Function.prototype.apply.call(console.log, console, arguments);
+  }
+}
+
+/**
+ * The currently active debug mode names.
+ */
+
+debug.names = [];
+debug.skips = [];
+
+/**
+ * Enables a debug mode by name. This can include modes
+ * separated by a colon and wildcards.
+ *
+ * @param {String} name
+ * @api public
+ */
+
+debug.enable = function(name) {
+  try {
+    localStorage.debug = name;
+  } catch(e){}
+
+  var split = (name || '').split(/[\s,]+/)
+    , len = split.length;
+
+  for (var i = 0; i < len; i++) {
+    name = split[i].replace('*', '.*?');
+    if (name[0] === '-') {
+      debug.skips.push(new RegExp('^' + name.substr(1) + '$'));
+    }
+    else {
+      debug.names.push(new RegExp('^' + name + '$'));
+    }
+  }
+};
+
+/**
+ * Disable debug output.
+ *
+ * @api public
+ */
+
+debug.disable = function(){
+  debug.enable('');
+};
+
+/**
+ * Humanize the given `ms`.
+ *
+ * @param {Number} m
+ * @return {String}
+ * @api private
+ */
+
+debug.humanize = function(ms) {
+  var sec = 1000
+    , min = 60 * 1000
+    , hour = 60 * min;
+
+  if (ms >= hour) return (ms / hour).toFixed(1) + 'h';
+  if (ms >= min) return (ms / min).toFixed(1) + 'm';
+  if (ms >= sec) return (ms / sec | 0) + 's';
+  return ms + 'ms';
+};
+
+/**
+ * Returns true if the given mode name is enabled, false otherwise.
+ *
+ * @param {String} name
+ * @return {Boolean}
+ * @api public
+ */
+
+debug.enabled = function(name) {
+  for (var i = 0, len = debug.skips.length; i < len; i++) {
+    if (debug.skips[i].test(name)) {
+      return false;
+    }
+  }
+  for (var i = 0, len = debug.names.length; i < len; i++) {
+    if (debug.names[i].test(name)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * Coerce `val`.
+ */
+
+function coerce(val) {
+  if (val instanceof Error) return val.stack || val.message;
+  return val;
+}
+
+// persist
+
+try {
+  if (window.localStorage) debug.enable(localStorage.debug);
+} catch(e){}
+
+},{}],9:[function(require,module,exports){
+
 module.exports =  require('./lib/');
 
-},{"./lib/":10}],9:[function(require,module,exports){
+},{"./lib/":11}],10:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -1025,7 +1169,7 @@ Emitter.prototype.removeEventListener = Emitter.prototype.off;
 
 Emitter.prototype.removeListener = Emitter.prototype.off;
 
-},{"emitter":22}],10:[function(require,module,exports){
+},{"emitter":23}],11:[function(require,module,exports){
 
 module.exports = require('./socket');
 
@@ -1037,7 +1181,7 @@ module.exports = require('./socket');
  */
 module.exports.parser = require('engine.io-parser');
 
-},{"./socket":11,"engine.io-parser":23}],11:[function(require,module,exports){
+},{"./socket":12,"engine.io-parser":24}],12:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -1641,7 +1785,7 @@ Socket.prototype.filterUpgrades = function (upgrades) {
   return filteredUpgrades;
 };
 
-},{"./emitter":9,"./transport":12,"./transports":14,"./util":19,"debug":21,"engine.io-parser":23,"global":26,"indexof":28}],12:[function(require,module,exports){
+},{"./emitter":10,"./transport":13,"./transports":15,"./util":20,"debug":22,"engine.io-parser":24,"global":27,"indexof":29}],13:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -1785,7 +1929,7 @@ Transport.prototype.onClose = function () {
   this.emit('close');
 };
 
-},{"./emitter":9,"./util":19,"engine.io-parser":23}],13:[function(require,module,exports){
+},{"./emitter":10,"./util":20,"engine.io-parser":24}],14:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -2047,7 +2191,7 @@ function load (arr, fn) {
   process(0);
 };
 
-},{"../util":19,"./websocket":18,"debug":21,"global":26}],14:[function(require,module,exports){
+},{"../util":20,"./websocket":19,"debug":22,"global":27}],15:[function(require,module,exports){
 
 /**
  * Module dependencies
@@ -2105,7 +2249,7 @@ function polling (opts) {
   }
 };
 
-},{"../util":19,"./flashsocket":13,"./polling-jsonp":15,"./polling-xhr":16,"./websocket":18,"global":26}],15:[function(require,module,exports){
+},{"../util":20,"./flashsocket":14,"./polling-jsonp":16,"./polling-xhr":17,"./websocket":19,"global":27}],16:[function(require,module,exports){
 
 /**
  * Module requirements.
@@ -2339,7 +2483,7 @@ JSONPPolling.prototype.doWrite = function (data, fn) {
   }
 };
 
-},{"../util":19,"./polling":17,"global":26}],16:[function(require,module,exports){
+},{"../util":20,"./polling":18,"global":27}],17:[function(require,module,exports){
 /**
  * Module requirements.
  */
@@ -2634,7 +2778,7 @@ if (xobject) {
   });
 }
 
-},{"../emitter":9,"../util":19,"./polling":17,"debug":21,"global":26}],17:[function(require,module,exports){
+},{"../emitter":10,"../util":20,"./polling":18,"debug":22,"global":27}],18:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -2868,7 +3012,7 @@ Polling.prototype.uri = function(){
   return schema + '://' + this.hostname + port + this.path + query;
 };
 
-},{"../transport":12,"../util":19,"debug":21,"engine.io-parser":23,"global":26}],18:[function(require,module,exports){
+},{"../transport":13,"../util":20,"debug":22,"engine.io-parser":24,"global":27}],19:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -3066,7 +3210,7 @@ WS.prototype.check = function(){
   return !!WebSocket && !('__initialize' in WebSocket && this.name === WS.prototype.name);
 };
 
-},{"../transport":12,"../util":19,"debug":21,"engine.io-parser":23,"global":26,"ws":29}],19:[function(require,module,exports){
+},{"../transport":13,"../util":20,"debug":22,"engine.io-parser":24,"global":27,"ws":30}],20:[function(require,module,exports){
 
 var global = require('global');
 
@@ -3344,7 +3488,7 @@ exports.qsParse = function(qs){
   return qry;
 };
 
-},{"global":26,"has-cors":27,"xmlhttprequest":20}],20:[function(require,module,exports){
+},{"global":27,"has-cors":28,"xmlhttprequest":21}],21:[function(require,module,exports){
 // browser shim for xmlhttprequest module
 var hasCORS = require('has-cors');
 
@@ -3365,7 +3509,7 @@ module.exports = function(opts) {
   }
 }
 
-},{"has-cors":27}],21:[function(require,module,exports){
+},{"has-cors":28}],22:[function(require,module,exports){
 
 /**
  * Expose `debug()` as the module.
@@ -3491,7 +3635,7 @@ debug.enabled = function(name) {
 
 if (window.localStorage) debug.enable(localStorage.debug);
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -3655,11 +3799,11 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{"indexof":28}],23:[function(require,module,exports){
+},{"indexof":29}],24:[function(require,module,exports){
 
 module.exports = require('./lib/');
 
-},{"./lib/":24}],24:[function(require,module,exports){
+},{"./lib/":25}],25:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -3828,7 +3972,7 @@ exports.decodePayload = function (data, callback) {
 
 };
 
-},{"./keys":25}],25:[function(require,module,exports){
+},{"./keys":26}],26:[function(require,module,exports){
 
 /**
  * Gets the keys for an object.
@@ -3849,7 +3993,7 @@ module.exports = Object.keys || function keys (obj){
   return arr;
 };
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 
 /**
  * Returns `this`. Execute this without a "context" (i.e. without it being
@@ -3859,7 +4003,7 @@ module.exports = Object.keys || function keys (obj){
 
 module.exports = (function () { return this; })();
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -3878,7 +4022,7 @@ var global = require('global');
 module.exports = 'XMLHttpRequest' in global &&
   'withCredentials' in new global.XMLHttpRequest();
 
-},{"global":26}],28:[function(require,module,exports){
+},{"global":27}],29:[function(require,module,exports){
 
 var indexOf = [].indexOf;
 
@@ -3889,7 +4033,7 @@ module.exports = function(arr, obj){
   }
   return -1;
 };
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 
 /**
  * Module dependencies.

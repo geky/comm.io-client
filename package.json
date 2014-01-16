@@ -10,6 +10,7 @@
     "url": "http://github.com/geky/comm.io-client.git"
   },
   "dependencies": {
+    "debug": "0.7.x",
     "engine.io-client": "0.7.x"
   },
   "devDependencies": {
