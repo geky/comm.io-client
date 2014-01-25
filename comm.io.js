@@ -118,17 +118,6 @@ Comm.prototype.emit = function() {
     }
 }
 
-Comm.prototype.vemit = function() {
-    var args = Array.prototype.slice.call(arguments)
-    var carriers = this.carriers
-    var comms = this._comms
-
-    for (var i = 0; i < carriers.length; i++) {
-        if (comms[i])
-            carriers[i].vemit.call(this, comms[i], args)
-    }
-}
-
 },{"./servercomm":4,"./socketcomm":5,"./util":6}],3:[function(require,module,exports){
 var io = require('engine.io-client')
 var util = require('util')
@@ -153,7 +142,6 @@ var util = require('./util')
 
 module.exports = ServerComm
 module.exports.emit = ServerComm.emit
-module.exports.vemit = ServerComm.vemit
 
 module.exports.supported = true
 
@@ -198,17 +186,11 @@ ServerComm.prototype.emit = function() {
         Array.prototype.slice.call(arguments))
 }
 
-ServerComm.prototype.vemit = function() {
-    send.call(this.socket, 'data:server',
-        Array.prototype.slice.call(arguments))
-}
-
 },{"./util":6}],5:[function(require,module,exports){
 var util = require('./util')
 
 module.exports = SocketComm
 module.exports.emit = SocketComm.emit
-module.exports.vemit = SocketComm.vemit
 
 module.exports.supported = true
 
@@ -252,23 +234,13 @@ SocketComm.prototype = Object.create(util.Emitter.prototype)
 
 // Public functions for transmitting data between single peer
 SocketComm.prototype.emit = function() {
-    send.call(this.socket, 'data', 0, [this.id],
+    send.call(this.socket, 'data', [this.id],
         Array.prototype.slice.call(arguments))
 }
-
-SocketComm.prototype.vemit = function() {
-    send.call(this.socket, 'data', 1, [this.id],
-        Array.prototype.slice.call(arguments))
-}
-
 
 // Public functions for transmitting data between all peers
 SocketComm.emit = function(ids, args) {
-    send.call(this.socket, 'data', 0, ids, args)
-}
-
-SocketComm.vemit = function(ids, args) {
-    send.call(this.socket, 'data', 1, ids, args)
+    send.call(this.socket, 'data', ids, args)
 }
 
 },{"./util":6}],6:[function(require,module,exports){
