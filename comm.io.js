@@ -3,6 +3,8 @@ module.exports = require('./lib/')
 
 },{"./lib/":3}],2:[function(require,module,exports){
 var util = require('./util')
+
+var ServerComm = require('./servercomm')
 var carriertypes = [
     require('./socketcomm')
 ]
@@ -38,6 +40,14 @@ function Comm(socket, opts) {
     socket.onopen = 
     handles.open = function() {
         send.call(socket, 'connect', info)
+
+        var comm = new ServerComm(socket)
+        self.server = comm
+
+        for (var k in comm.handles)
+            handles[k+':'+comm.id] = comm.handles[k]
+
+        comm.handles.open(emit.bind(self, 'server'))
     }
 
     socket.onmessage = 
@@ -119,7 +129,7 @@ Comm.prototype.vemit = function() {
     }
 }
 
-},{"./socketcomm":4,"./util":5}],3:[function(require,module,exports){
+},{"./servercomm":4,"./socketcomm":5,"./util":6}],3:[function(require,module,exports){
 var io = require('engine.io-client')
 var util = require('util')
 var Comm = require('./comm')
@@ -138,7 +148,62 @@ function cio(uri, opts) {
     return new Comm(socket, opts)
 }
 
-},{"./comm":2,"engine.io-client":9,"util":7}],4:[function(require,module,exports){
+},{"./comm":2,"engine.io-client":10,"util":8}],4:[function(require,module,exports){
+var util = require('./util')
+
+module.exports = ServerComm
+module.exports.emit = ServerComm.emit
+module.exports.vemit = ServerComm.vemit
+
+module.exports.supported = true
+
+
+// Local event handling functions
+var emit = util.emit
+var send = util.send
+
+
+// SocketComm definition
+function ServerComm(socket) {
+    if (!(this instanceof ServerComm))
+        return new ServerComm(socket)
+
+    var self = this
+    this.socket = socket
+    var handles = this.handles = {}
+
+    this.id = 'server'
+
+    handles.open = function(cb) {
+        cb(self)
+    }
+
+    handles.data = function(args) {
+        emit.apply(self, args)
+    }
+
+    handles.close = function(cb) {
+        cb()
+    }
+}
+
+
+// Extend Emitter
+ServerComm.prototype = Object.create(util.Emitter.prototype)
+
+
+// Public functions for transmitting data between single peer
+ServerComm.prototype.emit = function() {
+    send.call(this.socket, 'data:server',
+        Array.prototype.slice.call(arguments))
+}
+
+ServerComm.prototype.vemit = function() {
+    send.call(this.socket, 'data:server',
+        Array.prototype.slice.call(arguments))
+}
+
+},{"./util":6}],5:[function(require,module,exports){
 var util = require('./util')
 
 module.exports = SocketComm
@@ -206,7 +271,7 @@ SocketComm.vemit = function(ids, args) {
     send.call(this.socket, 'data', 1, ids, args)
 }
 
-},{"./util":5}],5:[function(require,module,exports){
+},{"./util":6}],6:[function(require,module,exports){
 var eio = require('engine.io-client')
 var debug = require('debug')('comm')
 var Emitter = eio.Emitter
@@ -216,8 +281,6 @@ var Emitter = eio.Emitter
 module.exports.debug = debug
 
 // Local event handling functions
-module.exports.on = Emitter.prototype.on
-module.exports.off = Emitter.prototype.off
 module.exports.emit = Emitter.prototype.emit
 
 module.exports.send = function() {
@@ -230,7 +293,7 @@ module.exports.send = function() {
 // EventEmitter class
 module.exports.Emitter = Emitter
 
-},{"debug":8,"engine.io-client":9}],6:[function(require,module,exports){
+},{"debug":9,"engine.io-client":10}],7:[function(require,module,exports){
 
 
 //
@@ -448,7 +511,7 @@ if (typeof Object.getOwnPropertyDescriptor === 'function') {
   exports.getOwnPropertyDescriptor = valueObject;
 }
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -993,7 +1056,7 @@ function hasOwnProperty(obj, prop) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
-},{"_shims":6}],8:[function(require,module,exports){
+},{"_shims":7}],9:[function(require,module,exports){
 
 /**
  * Expose `debug()` as the module.
@@ -1132,11 +1195,11 @@ try {
   if (window.localStorage) debug.enable(localStorage.debug);
 } catch(e){}
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 
 module.exports =  require('./lib/');
 
-},{"./lib/":11}],10:[function(require,module,exports){
+},{"./lib/":12}],11:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -1174,7 +1237,7 @@ Emitter.prototype.removeEventListener = Emitter.prototype.off;
 
 Emitter.prototype.removeListener = Emitter.prototype.off;
 
-},{"emitter":23}],11:[function(require,module,exports){
+},{"emitter":24}],12:[function(require,module,exports){
 
 module.exports = require('./socket');
 
@@ -1186,7 +1249,7 @@ module.exports = require('./socket');
  */
 module.exports.parser = require('engine.io-parser');
 
-},{"./socket":12,"engine.io-parser":24}],12:[function(require,module,exports){
+},{"./socket":13,"engine.io-parser":25}],13:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -1790,7 +1853,7 @@ Socket.prototype.filterUpgrades = function (upgrades) {
   return filteredUpgrades;
 };
 
-},{"./emitter":10,"./transport":13,"./transports":15,"./util":20,"debug":22,"engine.io-parser":24,"global":27,"indexof":29}],13:[function(require,module,exports){
+},{"./emitter":11,"./transport":14,"./transports":16,"./util":21,"debug":23,"engine.io-parser":25,"global":28,"indexof":30}],14:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -1934,7 +1997,7 @@ Transport.prototype.onClose = function () {
   this.emit('close');
 };
 
-},{"./emitter":10,"./util":20,"engine.io-parser":24}],14:[function(require,module,exports){
+},{"./emitter":11,"./util":21,"engine.io-parser":25}],15:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -2196,7 +2259,7 @@ function load (arr, fn) {
   process(0);
 };
 
-},{"../util":20,"./websocket":19,"debug":22,"global":27}],15:[function(require,module,exports){
+},{"../util":21,"./websocket":20,"debug":23,"global":28}],16:[function(require,module,exports){
 
 /**
  * Module dependencies
@@ -2254,7 +2317,7 @@ function polling (opts) {
   }
 };
 
-},{"../util":20,"./flashsocket":14,"./polling-jsonp":16,"./polling-xhr":17,"./websocket":19,"global":27}],16:[function(require,module,exports){
+},{"../util":21,"./flashsocket":15,"./polling-jsonp":17,"./polling-xhr":18,"./websocket":20,"global":28}],17:[function(require,module,exports){
 
 /**
  * Module requirements.
@@ -2488,7 +2551,7 @@ JSONPPolling.prototype.doWrite = function (data, fn) {
   }
 };
 
-},{"../util":20,"./polling":18,"global":27}],17:[function(require,module,exports){
+},{"../util":21,"./polling":19,"global":28}],18:[function(require,module,exports){
 /**
  * Module requirements.
  */
@@ -2783,7 +2846,7 @@ if (xobject) {
   });
 }
 
-},{"../emitter":10,"../util":20,"./polling":18,"debug":22,"global":27}],18:[function(require,module,exports){
+},{"../emitter":11,"../util":21,"./polling":19,"debug":23,"global":28}],19:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -3017,7 +3080,7 @@ Polling.prototype.uri = function(){
   return schema + '://' + this.hostname + port + this.path + query;
 };
 
-},{"../transport":13,"../util":20,"debug":22,"engine.io-parser":24,"global":27}],19:[function(require,module,exports){
+},{"../transport":14,"../util":21,"debug":23,"engine.io-parser":25,"global":28}],20:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -3215,7 +3278,7 @@ WS.prototype.check = function(){
   return !!WebSocket && !('__initialize' in WebSocket && this.name === WS.prototype.name);
 };
 
-},{"../transport":13,"../util":20,"debug":22,"engine.io-parser":24,"global":27,"ws":30}],20:[function(require,module,exports){
+},{"../transport":14,"../util":21,"debug":23,"engine.io-parser":25,"global":28,"ws":31}],21:[function(require,module,exports){
 
 var global = require('global');
 
@@ -3493,7 +3556,7 @@ exports.qsParse = function(qs){
   return qry;
 };
 
-},{"global":27,"has-cors":28,"xmlhttprequest":21}],21:[function(require,module,exports){
+},{"global":28,"has-cors":29,"xmlhttprequest":22}],22:[function(require,module,exports){
 // browser shim for xmlhttprequest module
 var hasCORS = require('has-cors');
 
@@ -3514,7 +3577,7 @@ module.exports = function(opts) {
   }
 }
 
-},{"has-cors":28}],22:[function(require,module,exports){
+},{"has-cors":29}],23:[function(require,module,exports){
 
 /**
  * Expose `debug()` as the module.
@@ -3640,7 +3703,7 @@ debug.enabled = function(name) {
 
 if (window.localStorage) debug.enable(localStorage.debug);
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -3804,11 +3867,11 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{"indexof":29}],24:[function(require,module,exports){
+},{"indexof":30}],25:[function(require,module,exports){
 
 module.exports = require('./lib/');
 
-},{"./lib/":25}],25:[function(require,module,exports){
+},{"./lib/":26}],26:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -3977,7 +4040,7 @@ exports.decodePayload = function (data, callback) {
 
 };
 
-},{"./keys":26}],26:[function(require,module,exports){
+},{"./keys":27}],27:[function(require,module,exports){
 
 /**
  * Gets the keys for an object.
@@ -3998,7 +4061,7 @@ module.exports = Object.keys || function keys (obj){
   return arr;
 };
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 
 /**
  * Returns `this`. Execute this without a "context" (i.e. without it being
@@ -4008,7 +4071,7 @@ module.exports = Object.keys || function keys (obj){
 
 module.exports = (function () { return this; })();
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -4027,7 +4090,7 @@ var global = require('global');
 module.exports = 'XMLHttpRequest' in global &&
   'withCredentials' in new global.XMLHttpRequest();
 
-},{"global":27}],29:[function(require,module,exports){
+},{"global":28}],30:[function(require,module,exports){
 
 var indexOf = [].indexOf;
 
@@ -4038,7 +4101,7 @@ module.exports = function(arr, obj){
   }
   return -1;
 };
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 
 /**
  * Module dependencies.
